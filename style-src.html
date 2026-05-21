@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Strict CSP: style-src has NO 'unsafe-inline'.
+       No nonce is used — the page's own CSS/JS are external files, so they
+       pass style-src 'self' / script-src 'self'. Anything the banner does
+       with inline styles gets blocked and reported. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' https://dev-consent-cookiebot-com.cookiebot.dev;
+    style-src   'self';
+    img-src     'self' data: blob: https://*.cookiebot.dev https://*.cookiebot.com;
+    font-src    'self' data: https://*.cookiebot.dev https://*.cookiebot.com;
+    connect-src 'self' https://*.cookiebot.dev https://*.cookiebot.com;
+    frame-src   'self' https://*.cookiebot.dev https://*.cookiebot.com;
+  " />
+
+  <title>style-src check </title>
+
+  <link rel="stylesheet" href="style-src.css" />
+
+  <!-- Registers the violation listener before the banner can render. -->
+  <script src="csp.js"></script>
+
+  <script
+    id="Cookiebot"
+    src="https://dev-consent-cookiebot-com.cookiebot.dev/uc.js"
+    data-cbid="5d0450b1-716d-4cf5-b0b1-d11523ff6b37"
+    data-blockingmode="auto"
+    type="text/javascript"
+    data-culture="en"></script>
+</head>
+<body>
+  <h1>style-src compliance check</h1>
+  <p class="sub">Loads the Cookiebot banner under a CSP with no <code>'unsafe-inline'</code>
+    for styles and counts <code>style-src</code> violations. EUD-3489.</p>
+
+  <div class="actions">
+    <button id="renew">Open / renew banner</button>
+    <button id="reset" class="danger">Reset consent cookie</button>
+  </div>
+
+  <div class="verdict idle" id="verdict">Open the banner to run the check.</div>
+  <ul id="log"></ul>
+</body>
+</html>
