@@ -1,396 +1,125 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!--
-     Content Security Policy compliance test.
-
-    This page enforces a STRICT CSP via <meta http-equiv>: style-src has NO
-    'unsafe-inline'. That reproduces the DigiD / zwitserleven.nl scenario from
-    the ticket, where customers are no longer allowed to whitelist
-    'unsafe-inline' for styles.
-
-    The page's OWN <style> and <script> blocks carry a nonce so they survive
-    the policy. The nonce is a fixed string here on purpose — a static test
-    fixture has no server to mint a per-request nonce, and the browser only
-    checks that the attribute matches the policy, not that it is random.
-
-    Anything the Cookiebot banner does that would need 'unsafe-inline'
-    (an injected <style> element, a style="..." markup attribute, a
-    setAttribute('style', ...) call) will be BLOCKED and reported through the
-    securitypolicyviolation DOM event — which fires even for a meta-tag CSP,
-    unlike report-uri/report-to.
-  -->
+  <!-- Strict CSP: style-src has NO 'unsafe-inline'.
+       The page's own <style>/<script> use a nonce; anything the banner does
+       with inline styles gets blocked and reported. -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src  'self' https://dev-consent-cookiebot-com.cookiebot.dev;
-    style-src   'self' ;
+    script-src  'self' 'nonce-cbCspTest' https://dev-consent-cookiebot-com.cookiebot.dev;
+    style-src   'self' 'nonce-cbCspTest';
     img-src     'self' data: blob: https://*.cookiebot.dev https://*.cookiebot.com;
     font-src    'self' data: https://*.cookiebot.dev https://*.cookiebot.com;
     connect-src 'self' https://*.cookiebot.dev https://*.cookiebot.com;
     frame-src   'self' https://*.cookiebot.dev https://*.cookiebot.com;
   " />
 
-  <title>Cookiebot Banner — CSP / inline-style Test (EUD-3489)</title>
+  <title>style-src check (EUD-3489)</title>
 
-  <!-- Violation listener registered FIRST, before the banner script, so
-       violations raised during banner render are not missed. -->
-  <script nonce="cbCspTest2026">
-    window.__cspViolations = [];
+  <!-- Catch style violations before the banner loads. -->
+  <script nonce="cbCspTest">
+    window.__style = [];
     document.addEventListener('securitypolicyviolation', function (e) {
-      window.__cspViolations.push({
-        directive: e.effectiveDirective || e.violatedDirective || '',
-        blockedURI: e.blockedURI || '',
-        sample: e.sample || '',
-        source: (e.sourceFile || '') + (e.lineNumber ? ':' + e.lineNumber : ''),
-        disposition: e.disposition || 'enforce',
-        time: new Date()
-      });
-      if (typeof window.__onCspViolation === 'function') window.__onCspViolation();
+      var dir = e.effectiveDirective || e.violatedDirective || '';
+      if (dir.indexOf('style') === 0) {
+        window.__style.push({
+          dir: dir,
+          what: e.sample || e.blockedURI || 'inline',
+          src: (e.sourceFile || '') + (e.lineNumber ? ':' + e.lineNumber : '')
+        });
+        if (window.__refresh) window.__refresh();
+      }
     });
   </script>
 
-  <!-- Cookiebot banner script (dev environment — contains the EUD-3489 fix).
-       The nonce on the loader lets Cookiebot propagate it to any script it
-       injects (EUD-5587 nonce propagation). -->
   <script
     id="Cookiebot"
     src="https://dev-consent-cookiebot-com.cookiebot.dev/uc.js"
-    data-cbid="5d0450b1-716d-4cf5-b0b1-d11523ff6b37"
+    data-cbid="51342693-175d-4d75-9d4b-f2a44a6b89d7"
     data-blockingmode="auto"
     type="text/javascript"
     data-culture="en"
-    nonce="cbCspTest2026"></script>
+    nonce="cbCspTest"></script>
 
-  <style nonce="cbCspTest2026">
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      max-width: 880px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f8fafc;
-      color: #1e293b;
-      font-size: 16px;
-    }
-    h1 { margin: 0 0 4px; font-size: 22px; }
-    .subtitle { color: #64748b; margin-bottom: 20px; font-size: 14px; }
-    .site-badge {
-      background: #6d28d9; color: #fff; padding: 6px 14px; border-radius: 20px;
-      font-size: 13px; font-weight: 600; display: inline-block; margin-bottom: 12px;
-    }
-    .card {
-      background: #fff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px;
-      margin: 14px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .card h3 { margin: 0 0 14px; font-size: 15px; color: #374151; }
-    .card p { font-size: 14px; line-height: 1.5; color: #475569; }
-
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
-    button {
-      background: #6d28d9; color: #fff; border: none; padding: 9px 16px;
-      border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 500;
-      transition: background 0.2s;
-    }
-    button:hover { background: #5b21b6; }
-    button.secondary { background: #6b7280; }
-    button.secondary:hover { background: #4b5563; }
+  <style nonce="cbCspTest">
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 640px; margin: 48px auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { color: #64748b; font-size: 14px; margin: 0 0 20px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    button { background: #6d28d9; color: #fff; border: none; padding: 9px 16px;
+      border-radius: 7px; cursor: pointer; font-size: 14px; }
     button.danger { background: #ef4444; }
-    button.danger:hover { background: #dc2626; }
-
-    .policy {
-      background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 14px 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
-      line-height: 1.7; white-space: pre-wrap; word-break: break-word;
-    }
-    .policy .hl { color: #fca5a5; font-weight: 700; }
-    .policy .ok { color: #86efac; }
-
-    .readout { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
-    .metric {
-      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;
-    }
-    .metric .name { font-size: 12px; color: #64748b; font-weight: 600; }
-    .metric .val { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px; font-variant-numeric: tabular-nums; }
-    .metric .val.bad { color: #b91c1c; }
-    .metric .val.good { color: #15803d; }
-
-    .verdict {
-      margin-top: 14px; padding: 14px 18px; border-radius: 8px;
-      font-size: 16px; font-weight: 700; text-align: center;
-    }
+    .verdict { padding: 16px; border-radius: 8px; font-size: 17px; font-weight: 700; text-align: center; }
     .verdict.pass { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
     .verdict.fail { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     .verdict.idle { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
-
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-    th { color: #64748b; font-weight: 600; }
-    td code, td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-    td code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
-    tr.style-row td:first-child { color: #b91c1c; font-weight: 700; }
-    tr.other-row td:first-child { color: #92400e; font-weight: 600; }
-
-    .log-empty { font-size: 13px; color: #94a3b8; padding: 12px 0; }
-
-    ol.checklist, ul.notes { font-size: 13px; line-height: 1.7; color: #475569; padding-left: 20px; margin: 4px 0; }
-    ol.checklist code, ul.notes code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
-
-    .hint { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+    ul { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #b91c1c;
+      margin-top: 12px; padding-left: 18px; }
+    li { margin: 4px 0; word-break: break-word; }
   </style>
 </head>
 <body>
-  <div class="site-badge">EUD-3489 · CSP — remove inline styles</div>
-  <h1>Cookiebot Banner — CSP / inline-style Test</h1>
-  <p class="subtitle">
-    Loads the banner under a <strong>strict CSP with no <code>'unsafe-inline'</code> for styles</strong>
-    (the DigiD / <code>zwitserleven.nl</code> scenario) and reports every Content-Security-Policy
-    violation the banner triggers.
-  </p>
+  <h1>style-src compliance check</h1>
+  <p class="sub">Loads the Cookiebot banner under a CSP with no <code>'unsafe-inline'</code>
+    for styles and counts <code>style-src</code> violations. EUD-3489.</p>
 
-  <!-- 1. Active policy -->
-  <div class="card">
-    <h3>1 · Active Content-Security-Policy on this page</h3>
-    <p>
-      Enforced through a <code>&lt;meta http-equiv&gt;</code> tag. The key line is
-      <code>style-src</code> — it allows <code>'self'</code> and this page's own
-      nonce, but <strong>not</strong> <code>'unsafe-inline'</code>. A CSP-compliant
-      banner must render with zero <code>style-src</code> violations.
-    </p>
-    <div class="policy" id="policyBox">loading…</div>
-    <p class="hint">In a real deployment the policy is sent as an HTTP response header;
-      a <code>&lt;meta&gt;</code> tag is the equivalent for this static test page.</p>
+  <div class="actions">
+    <button id="renew">Open / renew banner</button>
+    <button id="reset" class="danger">Reset consent cookie</button>
   </div>
 
-  <!-- 2. Live monitor -->
-  <div class="card">
-    <h3>2 · Live CSP-violation monitor</h3>
-    <div class="actions">
-      <button id="renewBtn">Open / renew banner</button>
-      <button class="secondary" id="measureBtn">Refresh</button>
-      <button class="danger" id="resetBtn">Reset consent cookie</button>
-      <button class="secondary" id="clearBtn">Clear log</button>
-    </div>
-    <div class="readout">
-      <div class="metric"><div class="name">style-src violations</div><div class="val" id="mStyle">—</div></div>
-      <div class="metric"><div class="name">script-src violations</div><div class="val" id="mScript">—</div></div>
-      <div class="metric"><div class="name">Other violations</div><div class="val" id="mOther">—</div></div>
-      <div class="metric"><div class="name">Banner rendered</div><div class="val" id="mBanner">—</div></div>
-    </div>
-    <div class="verdict idle" id="verdict">Open the banner to run the check.</div>
-    <p class="hint">PASS requires the banner to render with <strong>0 style-src violations</strong>.
-      Detection uses the <code>securitypolicyviolation</code> event — cross-check against the
-      browser DevTools console.</p>
-  </div>
+  <div class="verdict idle" id="verdict">Open the banner to run the check.</div>
+  <ul id="log"></ul>
 
-  <!-- 3. Violation log -->
-  <div class="card">
-    <h3>3 · Violation log</h3>
-    <table>
-      <thead>
-        <tr><th>Time</th><th>Directive</th><th>Blocked / sample</th><th>Source</th></tr>
-      </thead>
-      <tbody id="logBody"></tbody>
-    </table>
-    <div class="log-empty" id="logEmpty">No CSP violations recorded yet.</div>
-  </div>
-
-  <!-- 4. What the ticket changes -->
-  <div class="card">
-    <h3>4 · What EUD-3489 changes</h3>
-    <table>
-      <thead>
-        <tr><th>Sub-task</th><th>Before — needs <code>'unsafe-inline'</code></th><th>After — CSP-safe</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>EUD-6057</strong><br>show/hide state</td>
-          <td><code>style="display:none"</code> in <code>popup.html</code>/<code>slide.html</code>;
-            off-screen tracking iframes via <code>style.cssText</code></td>
-          <td><code>.CybotCookiebotHidden</code> / <code>.CybotCookiebotHiddenIframe</code>
-            class toggles + <code>hideElement()</code>/<code>showElement()</code></td>
-        </tr>
-        <tr>
-          <td><strong>EUD-6060</strong><br>banner stylesheet</td>
-          <td>per-tenant CSS injected as a <code>&lt;style&gt;</code> element
-            (<code>appendStylesheet</code>) → dozens of console errors</td>
-          <td>Constructed stylesheet — <code>CSSStyleSheet.replaceSync()</code> +
-            <code>document.adoptedStyleSheets</code> (CSSOM, not governed by
-            <code>style-src</code>); <code>&lt;style&gt;</code> kept only as a fallback
-            for browsers without <code>adoptedStyleSheets</code></td>
-        </tr>
-        <tr>
-          <td><strong>EUD-6062</strong><br>dynamic numeric values</td>
-          <td>fader gradients via <code>element.style.backgroundImage</code>;
-            spinner width read from <code>clientHeight</code></td>
-          <td>fader gradients in <code>banner.css</code> via the
-            <code>#000001</code> colour-placeholder pass; spinner width hardcoded in CSS</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="hint">Note: a JS <code>element.style.x = y</code> assignment is <em>not</em> itself a
-      CSP violation (it is CSSOM, not parsed inline content). The measurable violations come from
-      injected <code>&lt;style&gt;</code> elements, <code>style="…"</code> markup attributes and
-      <code>setAttribute('style', …)</code> — all of which this page catches.</p>
-  </div>
-
-  <!-- 5. Regression checklist -->
-  <div class="card">
-    <h3>5 · Regression checklist</h3>
-    <ol class="checklist">
-      <li>Banner opens and closes with <strong>0</strong> <code>style-src</code> violations.</li>
-      <li>Accept / Deny / Customize and the details/about tabs — no violation on any interaction.</li>
-      <li>Scroll-area faders render the correct gradient colour (EUD-6062).</li>
-      <li>Widget / floating button and the cookie declaration page — no violations.</li>
-      <li>GPC toast and the promotion banner — no violations.</li>
-      <li>All templates: Swift, Elemental, Custom, US "Do not sell".</li>
-      <li>Auto-blocking mode — blocked third-party elements restore correctly on consent.</li>
-      <li>Old cached <code>banner.css</code> + new <code>cc.js</code> still clean.</li>
-      <li>Visuals identical to a page <em>without</em> CSP — no layout regression.</li>
-      <li>Legacy browser without <code>adoptedStyleSheets</code> — falls back to the
-        <code>&lt;style&gt;</code> element (one expected <code>style-src</code> violation;
-        such customers still need <code>'unsafe-inline'</code>).</li>
-    </ol>
-  </div>
-
-  <script nonce="cbCspTest2026">
-    const DIALOG_ID = 'CybotCookiebotDialog';
-    const $ = (id) => document.getElementById(id);
-
-    /* ---- render the active CSP, highlighting style-src ------------------ */
-    function renderPolicy() {
-      const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-      const box = $('policyBox');
-      if (!meta) { box.textContent = '(no CSP meta tag found)'; return; }
-      const lines = meta.getAttribute('content').split(';')
-        .map((s) => s.trim()).filter(Boolean);
-      box.textContent = '';
-      lines.forEach((line) => {
-        const span = document.createElement('span');
-        if (/^style-src/.test(line)) {
-          span.className = 'hl';
-          span.textContent = line + ';   ← no \'unsafe-inline\'';
-        } else if (/^script-src/.test(line)) {
-          span.className = 'ok';
-          span.textContent = line + ';';
-        } else {
-          span.textContent = line + ';';
-        }
-        box.appendChild(span);
-        box.appendChild(document.createTextNode('\n'));
-      });
-    }
-
-    /* ---- classify + render violations ----------------------------------- */
-    function bucket(directive) {
-      if (directive.indexOf('style') === 0) return 'style';
-      if (directive.indexOf('script') === 0) return 'script';
-      return 'other';
-    }
-
-    function renderLog() {
-      const v = window.__cspViolations || [];
-      const body = $('logBody');
-      body.textContent = '';
-      $('logEmpty').style.display = v.length ? 'none' : 'block';
-
-      v.slice(-60).reverse().forEach((row) => {
-        const b = bucket(row.directive);
-        const tr = document.createElement('tr');
-        tr.className = b === 'style' ? 'style-row' : (b === 'other' ? 'other-row' : '');
-        const cells = [
-          row.time.toLocaleTimeString(),
-          row.directive,
-          row.sample ? row.sample : row.blockedURI,
-          row.source || '—'
-        ];
-        cells.forEach((text, i) => {
-          const td = document.createElement('td');
-          if (i >= 1) td.className = 'mono';
-          td.textContent = text;
-          tr.appendChild(td);
-        });
-        body.appendChild(tr);
-      });
-    }
-
-    function bannerRendered() {
-      return !!document.getElementById(DIALOG_ID);
-    }
+  <script nonce="cbCspTest">
+    var verdict = document.getElementById('verdict');
+    var log = document.getElementById('log');
 
     function refresh() {
-      const v = window.__cspViolations || [];
-      let style = 0, script = 0, other = 0;
-      v.forEach((row) => {
-        const b = bucket(row.directive);
-        if (b === 'style') style++;
-        else if (b === 'script') script++;
-        else other++;
+      var v = window.__style;
+      var rendered = !!document.getElementById('CybotCookiebotDialog');
+
+      log.textContent = '';
+      v.forEach(function (row) {
+        var li = document.createElement('li');
+        li.textContent = row.dir + ' — ' + row.what + (row.src ? '  (' + row.src + ')' : '');
+        log.appendChild(li);
       });
 
-      const mStyle = $('mStyle'), mScript = $('mScript'), mOther = $('mOther'), mBanner = $('mBanner');
-      mStyle.textContent = String(style);
-      mStyle.className = 'val ' + (style ? 'bad' : 'good');
-      mScript.textContent = String(script);
-      mScript.className = 'val ' + (script ? 'bad' : '');
-      mOther.textContent = String(other);
-      mOther.className = 'val ' + (other ? 'bad' : '');
-
-      const rendered = bannerRendered();
-      mBanner.textContent = rendered ? 'yes' : 'no';
-      mBanner.className = 'val ' + (rendered ? 'good' : '');
-
-      const verdict = $('verdict');
-      if (style > 0) {
+      if (v.length > 0) {
         verdict.className = 'verdict fail';
-        verdict.textContent = 'FAIL — ' + style + ' style-src violation' +
-          (style === 1 ? '' : 's') + ' — the banner is not CSP-compliant.';
+        verdict.textContent = 'FAIL — ' + v.length + ' style-src violation' + (v.length === 1 ? '' : 's');
       } else if (rendered) {
         verdict.className = 'verdict pass';
-        verdict.textContent = 'PASS — banner rendered with 0 style-src violations.';
+        verdict.textContent = 'PASS — banner rendered, 0 style-src violations';
       } else {
         verdict.className = 'verdict idle';
-        verdict.textContent = 'Banner not rendered yet — open / renew it, or reset the consent cookie.';
+        verdict.textContent = 'Banner not rendered yet — open / renew it.';
       }
-      renderLog();
     }
-    window.__onCspViolation = refresh;
+    window.__refresh = refresh;
 
-    /* ---- banner controls ------------------------------------------------ */
-    function renewBanner() {
-      if (window.Cookiebot && typeof window.Cookiebot.renew === 'function') {
-        window.Cookiebot.renew();
-      } else if (window.Cookiebot && typeof window.Cookiebot.show === 'function') {
-        window.Cookiebot.show();
-      }
+    function renew() {
+      if (window.Cookiebot && Cookiebot.renew) Cookiebot.renew();
+      else if (window.Cookiebot && Cookiebot.show) Cookiebot.show();
       setTimeout(refresh, 250);
     }
 
-    function resetConsent() {
+    document.getElementById('renew').addEventListener('click', renew);
+    document.getElementById('reset').addEventListener('click', function () {
       document.cookie = 'CookieConsent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-      renewBanner();
-    }
+      renew();
+    });
 
-    function clearLog() {
-      window.__cspViolations.length = 0;
-      refresh();
-    }
-
-    /* ---- wiring --------------------------------------------------------- */
-    $('renewBtn').addEventListener('click', renewBanner);
-    $('measureBtn').addEventListener('click', refresh);
-    $('resetBtn').addEventListener('click', resetConsent);
-    $('clearBtn').addEventListener('click', clearLog);
-
-    window.addEventListener('CookiebotOnDialogDisplay', () => setTimeout(refresh, 80));
-    window.addEventListener('CookiebotOnLoad', () => setTimeout(refresh, 150));
-    window.addEventListener('CookiebotOnConsentReady', () => setTimeout(refresh, 150));
-
-    renderPolicy();
-    refresh();
+    window.addEventListener('CookiebotOnDialogDisplay', function () { setTimeout(refresh, 80); });
+    window.addEventListener('CookiebotOnLoad', function () { setTimeout(refresh, 150); });
     setInterval(refresh, 1500);
+    refresh();
   </script>
 </body>
 </html>
